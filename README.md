@@ -15,3 +15,18 @@ You need `pywin32` module (`pip install pywin32`).
 ## Software definitions
 
 All the enum definitions and values are extracted from Mbucchia's code: [OpenXR-Toolkit/XR_APILAYER_MBUCCHIA_toolkit/interfaces.h](https://github.com/mbucchia/OpenXR-Toolkit/blob/main/XR_APILAYER_MBUCCHIA_toolkit/interfaces.h)
+
+## Usage
+
+### List modules 
+<img src="doc/list.png"></img></br>
+
+### Get Module configuration
+<img src="doc/config.png"></img></br>
+
+### Get attribute values
+<img src="doc/getattr.png"></img></br>
+
+### Set turbo value
+<img src="doc/turbo.png"></img></br>
+
