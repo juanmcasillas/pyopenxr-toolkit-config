@@ -32,6 +32,7 @@ import itertools
 import sys
 from enum import Enum
 import argparse
+import json
 
 class ExtendedEnum(Enum):
     @classmethod
@@ -83,6 +84,13 @@ class PostSunGlasses(ExtendedEnum):
     Light   = 1
     Dark    = 2
     Night   = 3
+
+class OverlayType(ExtendedEnum):
+    "enum class OverlayType { None = 0, FPS, Advanced, Developer, MaxValue };"
+    Off       = 0
+    FPS       = 1
+    Advanced  = 2
+    Developer = 3
 
 
 def get_current_user_sid(username=None):
@@ -141,7 +149,7 @@ class OpenXRManager:
         self.config_map['override_resolution'] = OnOff
         self.config_map['expert_menu'] = OnOff
         self.config_map['overlay_show_clock'] = OnOff
-        self.config_map['overlay'] = OnOff
+        self.config_map['overlay'] = OverlayType
         self.config_map['motion_reprojection'] = DefaultOnOff
         self.config_map['motion_reprojection_rate'] = MotionReprojectionRate
         self.config_map['vrs_cull_mask'] = OnOff
@@ -149,9 +157,7 @@ class OpenXRManager:
         self.config_map['post_sunglasses'] = PostSunGlasses
 
 
-    @staticmethod
-    def set_value(path, value):
-        pass
+
 
         
 
@@ -177,6 +183,21 @@ class OpenXRManager:
             modules.append(k)
         return modules
     
+
+
+    def set_value(self, module, attr, value):
+
+        attr_found, options = self.get_options(attr)
+        if attr_found and not value in options.list():
+            print("Value: '%s' for attr '%s' is not valid. Avaliable options: %s" % (value, attr, ", ".join(options.list())))
+            return False
+        # set the registry key here.
+        # and convert the value to the int representation of the enum
+        value = options[value].value if options else value
+        self.set_module_value(module, attr, value)
+        return True
+    
+
     def set_module_value(self, module, attr, value):
 
         # first, get the config
@@ -218,16 +239,39 @@ class OpenXRManager:
         
         n,v,t = data
         if n in self.config_map.keys():
-            
             self.config_map[n] = self.config_map[n](v)
             return n, self.config_map[n].name, t
         
         return n,v,t
         
     def get_options(self, attr):
+
         if not attr.lower() in self.config_map.keys():
-            return None
-        return self.config_map[attr.lower()]
+            return False,None
+        return True, self.config_map[attr.lower()]
+
+    def save_config(self, fname, config):
+        
+        data = json.dumps(config,indent=2)
+        with open(fname,"w",encoding='UTF-8') as fd:
+            fd.write(data)
+            
+
+    def read_from_file(self, fname):
+        
+        with open(fname,"r",encoding='UTF-8') as fd:
+            data = fd.read()
+        
+        try:
+            data = json.loads(data)
+        except Exception as e:
+            print("Can't load data from %s: %s" % (fname, e))
+            sys.exit(-1)
+        
+        return data
+                  
+            
+        
 
 if __name__ == "__main__":
 
@@ -236,6 +280,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", help="Show data about file and processing (Debug)", action="count", default=0)
     parser.add_argument("-m", "--module", help="selects the mode to run on", default="DCS World")
     parser.add_argument("-l", "--list", help="list configured modules", action="store_true")
+    parser.add_argument("-f", "--file", help="read / write config to file (json format)")
     parser.add_argument("-c", "--get-config", help="Get the configuration for the module", action="store_true")
 
     parser.add_argument("-s", "--set",
@@ -266,9 +311,14 @@ if __name__ == "__main__":
         print("Module: %s" % args.module)
         print('{0:<25} {1}'.format("Key", "Value"))
         print("-" * 120)
+        parsed_config = {}
         for data in config:
             k_name, k_value, k_type = openXR.map_data(data)
             print('{0:<25} {1}'.format(k_name, k_value))
+            parsed_config[k_name] = k_value
+
+        if args.file:
+            openXR.save_config(args.file, parsed_config)
         sys.exit(0)
 
     if args.get:
@@ -282,15 +332,14 @@ if __name__ == "__main__":
 
     if args.set:
         attr,value = args.set
-        options = openXR.get_options(attr)
-        if not options:
-            print("Attr: '%s' has no available options. Try -l" % attr)
-            sys.exit(-1)
-        if not value in options.list():
-            print("Value: '%s' for attr '%s' is not valid. Avaliable options: %s" % (value, attr, ", ".join(options.list())))
-            sys.exit(-1)
-        # set the registry key here.
-        # and convert the value to the int representation of the enum
-        value = options[value].value
-        openXR.set_module_value(args.module, attr, value)
+        if not openXR.set_value(args.module, attr, value):
+            sys.exit(0)     
+    
 
+    ## if here, and only -f ... read it and process all the file
+    if args.file:
+        config = openXR.read_from_file(args.file)
+        for item in config.items():
+            attr,value = item
+            if not openXR.set_value(args.module, attr, value):
+                continue
