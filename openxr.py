@@ -9,7 +9,7 @@
 # Configures some registry options from command line, so you don't need to start the app, 
 # then open the OpenXR-Toolkit and restart the session.
 #
-# usage: openxr.py [-h] [-v] [-m MODULE] [-l] [-c] [-s attr value] [-g attr]
+# usage: openxr.py [-h] [-v] [-m MODULE] [-l] [-f FILE] [-c] [-s attr value] [-g attr]
 #
 # optional arguments:
 #   -h, --help            show this help message and exit
@@ -17,6 +17,7 @@
 #   -m MODULE, --module MODULE
 #                         selects the mode to run on
 #   -l, --list            list configured modules
+#   -f FILE, --file FILE  read / write config to file (json format)
 #   -c, --get-config      Get the configuration for the module
 #   -s attr value, --set attr value
 #                         Attribute value to set
